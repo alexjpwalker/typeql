@@ -22,7 +22,57 @@
 load("@vaticle_dependencies//tool/checkstyle:rules.bzl", "checkstyle_test")
 load("@vaticle_dependencies//tool/release/deps:rules.bzl", "release_validate_deps")
 load("@vaticle_bazel_distribution//github:rules.bzl", "deploy_github")
-load("//:deployment.bzl", "deployment")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@vaticle_bazel_distribution//crates:rules.bzl", "assemble_crate", "deploy_crate")
+load("@vaticle_dependencies//distribution:deployment.bzl", "deployment")
+load("//:deployment.bzl", deployment_github = "deployment")
+
+exports_files(
+    ["VERSION", "RELEASE_TEMPLATE.md", "README.md"],
+    visibility = ["//visibility:public"]
+)
+
+rust_library(
+    name = "typeql_lang",
+    srcs = glob([
+        "*.rs",
+        "query/*.rs",
+        "parser/*.rs",
+    ]),
+    deps = [
+        # External Vaticle Dependencies
+        "@vaticle_typeql//grammar/rust:typeql_grammar",
+    ]
+)
+
+assemble_crate(
+    name = "assemble_crate",
+    target = ":typeql_lang",
+    description = "TypeQL Language for Rust",
+    license = "Apache-2.0",
+    readme_file = "//:README.md",
+    homepage = "https://github.com/vaticle/typeql",
+    repository = "https://github.com/vaticle/typeql",
+    keywords = ["typeql", "typedb", "database", "strongly-typed"],
+    authors = ["Vaticle <community@vaticle.com>"]
+)
+
+deploy_crate(
+    name = "deploy_crate",
+    target = ":assemble_crate",
+    snapshot = deployment["crate.snapshot"],
+    release = deployment["crate.release"],
+)
+
+deploy_github(
+    name = "deploy_github_rust",
+    release_description = "//:RELEASE_TEMPLATE.md",
+    title = "TypeQL",
+    title_append_version = True,
+    organisation = deployment_github['github.organisation'],
+    repository = deployment_github['github.repository'],
+    draft = False
+)
 
 exports_files(
     ["VERSION", "RELEASE_TEMPLATE.md", "requirements.txt", "README.md"],
@@ -34,8 +84,8 @@ deploy_github(
     release_description = "//:RELEASE_TEMPLATE.md",
     title = "TypeQL",
     title_append_version = True,
-    organisation = deployment['github.organisation'],
-    repository = deployment['github.repository'],
+    organisation = deployment_github['github.organisation'],
+    repository = deployment_github['github.repository'],
     draft = False
 )
 
